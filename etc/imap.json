@@ -1,0 +1,7 @@
+{
+	"server":"",
+	"port":993,
+	"settings":["imap", "ssl", "novalidate-cert"],
+	"user":"",
+	"password":""
+}
