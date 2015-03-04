@@ -1,0 +1,55 @@
+#!/usr/bin/php -q
+<?php
+
+$config = json_decode(file_get_contents(dirname(dirname(__FILE__)) . "/etc/imap.json"), true);
+// No error checking, but this is a quick and dirty script.
+
+$connect_string = "{" . $config['server'] . ":" . $config['port'] . "/" . implode("/", $config['settings']) . "}INBOX";
+
+$connection = imap_open($connect_string, $config['user'], $config['password']) or die("Can't connect: " . imap_last_error());
+$mcount = imap_check($connection);
+$people = array();
+$unread = 0;
+$messages = 0;
+$days = array();
+$chunks = array();
+foreach(imap_fetch_overview($connection,"1:{$mcount->Nmsgs}",0) as $msg)
+{
+	if($msg->deleted == 1) { continue; } // We don't care about deleted mail
+	$id = $msg->message_id . "";
+	$subject = $msg->subject . "";
+	$dt = (int) ("" . $msg->udate);
+	$from = preg_replace("/^([^<]*)<([^>@]+)@([^>@]+)>(.*)$/", "$2@$3", $msg->from . "");
+	$size = (int) ("" . $msg->size);
+	if($msg->seen == 0) { $unread++; }
+	$chunk = gmdate("YmdH", $dt);
+	$dow = gmdate("l", $dt);
+
+	if(!(array_key_exists($from, $people)))
+	{
+		$people[$from] = 0;
+	}
+	$people[$from] = $people[$from] + 1;
+
+	if(!(array_key_exists($chunk, $chunks)))
+	{
+		$chunks[$chunk] = 0;
+	}
+	$chunks[$chunk] = $chunks[$chunk] + 1;
+	if(!(array_key_exists($dow, $days)))
+	{
+		$days[$dow] = 0;
+	}
+	$days[$dow] = $days[$dow] + 1;
+
+	$messages++;
+}
+
+$ret = array();
+$ret['messages'] = $messages;
+$ret['unread'] = $unread;
+$ret['times'] = $chunks;
+$ret['days'] = $days;
+$ret['senders'] = $people;
+
+print(json_encode($ret));
