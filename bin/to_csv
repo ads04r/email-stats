@@ -1,0 +1,42 @@
+#!/usr/bin/php -q
+<?php
+
+function todate($string)
+{
+	if(strlen($string) != 10) { return(time()); }
+
+	$ds = substr($string, 0, 4) . "-" . substr($string, 4, 2) . "-" . substr($string, 6, 2) . " " . substr($string, 8, 2) . ":00:00 GMT";
+	$dt = strtotime($ds);
+
+	return($dt);
+}
+
+$path = "php://stdin";
+if(count($argv) > 1)
+{
+	if(file_exists($argv[1]))
+	{
+		$path = $argv[1];
+	}
+}
+
+$data = json_decode(file_get_contents($path), true);
+
+$keys = array_keys($data['times']);
+sort($keys);
+$minds = $keys[0];
+$maxds = $keys[(count($keys) - 1)];
+$maxdt = todate($maxds);
+$mindt = todate($minds);
+
+
+for($i = $mindt; $i < $maxdt; $i = $i + 3600)
+{
+	$key = gmdate("YmdH", $i);
+	$val = 0;
+	if(array_key_exists($key, $data['times']))
+	{
+		$val = $data['times'][$key];
+	}
+	print(gmdate("Y-m-d H", $i) . ":00\t" . $val . "\n");
+}
